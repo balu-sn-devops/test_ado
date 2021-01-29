@@ -1,0 +1,109 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+- master
+- dev
+name: $(Date:yyyyMMdd)$(Rev:.r)
+stages:
+- stage: Build
+  jobs:
+  - job: "Build"
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+          echo 'Hello world '
+          echo $(build.sourceBranchName)
+- stage: Test
+  jobs:
+  - job: 'RegisterArtifactPackage'
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      inputs:
+        connectionType: 'connectedServiceName'
+        serviceConnection: 'bmurki-restapiextension'
+        method: 'POST'
+        body: |
+          {
+            "artifacts": [
+              {
+                "name": "DemoArtifact1",
+                "version": "1.$(build.buildId)",
+                "semanticVersion": "1.$(build.buildId).0",
+                "repositoryName": "DemoArtifactRepo1"
+              },
+              {
+                "name": "DemoArtifact2",
+                "version": "1.$(build.buildId)",
+                "semanticVersion": "1.$(build.buildId).0",
+                "repositoryName": "DemoArtifactRepo1"
+              }
+            ],
+          "pipelineName": "$(system.teamProject)/$(build.definitionName)",
+          "taskExecutionNumber": "$(build.buildId)",
+          "stageName": "$(system.jobDisplayName)",
+          "branchName": "$(build.sourceBranchName)"
+          }
+        urlSuffix: '/artifact/registration?orchestrationToolId=9a09a649db8a9450473d5ce4dc961907'
+        waitForCompletion: 'false'
+  - job: 'PushArtifacts'
+    pool: server
+    dependsOn: 'RegisterArtifactPackage'
+    steps:
+    - task: InvokeRESTAPI@1
+      inputs:
+        connectionType: 'connectedServiceName'
+        serviceConnection: 'bmurki-restapiextension'
+        method: 'POST'
+        body: |
+          {
+            "name": "MyArtifactPackage1",
+            "artifacts": [
+              {
+                "name": "DemoArtifactRepo1",
+                "repositoryName": "DemoArtifactRepo1",
+                "version": "1.$(build.buildId)",
+                "pipelineName": "$(system.teamProject)/$(build.definitionName)",
+                "taskExecutionNumber": "$(build.buildId)",
+                "stageName": "$(system.jobDisplayName)",
+                "branchName": "$(build.sourceBranchName)"
+              }
+            ],
+            "pipelineName": "$(system.teamProject)/$(build.definitionName)",
+            "taskExecutionNumber": "$(build.buildId)",
+            "stageName": "$(system.jobDisplayName)",
+            "branchName": "$(build.sourceBranchName)"
+          }
+        urlSuffix: '/package/registration?orchestrationToolId=9a09a649db8a9450473d5ce4dc961907'
+        waitForCompletion: 'false'
+- stage: Deploy
+  jobs:
+  - job: 'Deploy'
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      inputs:
+        connectionType: 'connectedServiceName'
+        serviceConnection: 'bmurki-restapiextension'
+        method: 'POST'
+        body: |
+          {
+              "buildNumber": "$(build.buildId)",
+              "isMultiBranch": "true",
+              "branchName": "$(build.sourceBranchName)"
+          }
+        urlSuffix: '/orchestration/changeControl?toolId=9a09a649db8a9450473d5ce4dc961907'
+        waitForCompletion: 'true'
+  
+

@@ -1,0 +1,124 @@
+
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+trigger:
+- master
+pool:
+  vmImage: 'ubuntu-latest'
+stages:
+    - stage: Build
+      jobs:
+          - job: 'j1'
+            steps:
+            - task: Bash@3
+              inputs:
+                targetType: 'inline'
+                script: |
+                  # Write your commands here
+                  echo 'Build in progress'
+    - stage: Test
+      jobs:
+          - job: 'j2'
+            steps:
+            - task: Bash@3
+              inputs:
+                targetType: 'inline'
+                script: |
+                  # Write your commands here
+                  echo 'Deploy in progress'
+
+    - stage: Deploy
+      jobs:
+          - job: 'j3'
+            timeoutInMinutes: 0
+            pool: server
+            steps:
+            - task: InvokeRESTAPI@1
+              inputs:
+                connectionType: 'connectedServiceName'
+                serviceConnection: 'nitinpor2'
+                method: 'POST'
+                body: |
+                  {
+                    "buildNumber": "$(build.buildId)",
+                    "isMultiBranch": "true",
+                    "branchName": "$(build.sourceBranchName)"
+                  }
+                urlSuffix: 'api/sn_devops/v1/devops/orchestration/changeControl?toolId=cd0fcf5edbbd2450334266041b9619de&toolType=adop'
+                waitForCompletion: 'true'
+    - stage: RegisterArtifact
+      jobs:
+          - job: 'j4'
+            pool: server
+            steps:
+            - task: InvokeRESTAPI@1
+              inputs:
+                connectionType: 'connectedServiceName'
+                serviceConnection: 'nitinpor2'
+                method: 'POST'
+                body: |
+                  {
+                    "artifacts": [
+                      {
+                          "name": "ado-artifact1",
+                          "version": "1.$(build.buildId)",
+                          "semanticVersion": "1.$(build.buildId).0",
+                          "repositoryName": "repo1"
+                      },
+                      {
+                          "name": "ado-artifact2",
+                          "version": "1.$(build.buildId)",
+                          "semanticVersion": "1.$(build.buildId).0",
+                          "repositoryName": "ado-repo2"
+                      }
+                    ],
+                    "pipelineName": "$(system.teamProject)/$(build.definitionName)",
+                    "taskExecutionNumber": "$(build.buildId)",
+                    "stageName": "$(system.jobDisplayName)",
+                    "branchName": "$(build.sourceBranchName)"
+                  }
+                urlSuffix: '/api/sn_devops/v1/devops/artifact/registration?orchestrationToolId=cd0fcf5edbbd2450334266041b9619de'
+                waitForCompletion: 'false'
+              continueOnError: true
+    - stage: RegisterPackage
+      jobs:
+          - job: 'j5'
+            pool: server
+            steps:
+            - task: InvokeRESTAPI@1
+              inputs:
+                connectionType: 'connectedServiceName'
+                serviceConnection: 'nitinpor2'
+                method: 'POST'
+                body: |
+                  {
+                      "name": "ado-pkg1",
+                      "artifacts": [
+                      {
+                          "name": "ado-artifact1",
+                          "repositoryName": "ado-repo1",
+                          "version": "1.$(build.buildId)",
+                          "pipelineName":"$(system.teamProject)/$(build.definitionName)",
+                          "taskExecutionNumber":"$(build.buildId)",
+                          "stageName":"$(system.jobDisplayName)",
+                          "branchName":"$(build.sourceBranchName)"
+                      }],
+                      "pipelineName":"$(system.teamProject)/$(build.definitionName)",
+                      "taskExecutionNumber":"$(build.buildId)",
+                      "stageName":"$(system.jobDisplayName)",
+                      "branchName":"$(build.sourceBranchName)"
+                  }
+                urlSuffix: 'api/sn_devops/v1/devops/package/registration?orchestrationToolId=cd0fcf5edbbd2450334266041b9619de'
+                waitForCompletion: 'false'
+              continueOnError: true
+    - stage: final
+      jobs:
+          - job: 'j6'
+            steps:
+            - task: Bash@3
+              inputs:
+                targetType: 'inline'
+                script: |
+                  # Write your commands here
+                  echo 'Hello world'

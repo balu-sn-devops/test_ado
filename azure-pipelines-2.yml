@@ -1,0 +1,99 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+- master
+name: $(Date:yyyyMMdd)$(Rev:.r)
+stages:
+- stage: DEV
+  jobs:
+  - job: "Build"
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Test'
+    dependsOn: 'Build'   
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Deploy'
+    dependsOn: 'Test' 
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+
+- stage: QA
+  jobs:
+  - job: "Build"
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Test'
+    dependsOn: 'Build'
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Deploy'
+    dependsOn: 'Test'
+    steps:    
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+
+- stage: PROD
+  jobs:
+  - job: "Build"
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Test'
+    dependsOn: 'Build'
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+  - job: 'Deploy'
+    dependsOn: 'Test'
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      inputs:
+        connectionType: 'connectedServiceName'
+        serviceConnection: 'bmurki2'
+        method: 'POST'
+        body: |
+         {
+            "buildNumber": "$(build.buildId)",
+            "isMultiBranch": "true",
+            "branchName": "$(build.sourceBranchName)"
+                   }
+        waitForCompletion: 'true'

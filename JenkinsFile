@@ -1,0 +1,43 @@
+pipeline {
+   agent any
+   tools {
+        maven 'Maven'
+
+    }
+   stages {
+        stage('Build') {
+            steps {
+               snDevOpsStep ()
+                sh 'mvn -B -DskipTests clean compile'
+            }
+        }
+        stage('Test') { 
+            steps {
+               snDevOpsStep ()
+
+                sh 'mvn test'
+                sleep 30
+            }
+            post {
+           		always {
+                 junit '**/target/surefire-reports/*.xml'
+            	} 
+            } 
+        }
+    
+       
+ 	   stage('Deploy') { 
+	            steps {
+	               snDevOpsStep ()
+	               echo 'Deploying....'
+                	sleep 3
+	               snDevOpsChange()
+	               sh 'mvn clean install package'
+
+	            }
+	            
+	        }
+
+      
+  }
+}
